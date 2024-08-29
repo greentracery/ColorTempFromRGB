@@ -71,7 +71,7 @@ class App():
                 
                 color_temp, distance = self.ct.getColorTempFromRGBN(rgbN[0],rgbN[1], rgbN[2])
                 
-                self.add_frame_info(frame, RGB, rgbN, color_temp, distance)
+                frame = self.add_frame_info(frame, RGB, rgbN, color_temp, distance)
                 
                 t2 = int(datetime.datetime.utcnow().timestamp())
                 if t2 >= self.t0 + self.delay:
@@ -140,6 +140,7 @@ class App():
         cv2.putText(frame, f"width:{self.vid.width}", (10, self.vid.height - 50), self.vid.font, 0.6, (0, 250, 0), 1)
         cv2.putText(frame, f"height:{self.vid.height}", (10, self.vid.height - 25), self.vid.font, 0.6, (0, 250, 0), 1)
         
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #BGR2RGB
 
 if __name__ == "__main__":
     app = App(video_source, delay)
