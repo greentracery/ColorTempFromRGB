@@ -7,6 +7,8 @@
 
 import cv2
 import os
+import sys
+import io
 import time
 
 class VideoCapture():
@@ -30,7 +32,7 @@ class VideoCapture():
             else:
                 return (status, None)
         else:
-            return (status, None)
+            return (False, None)
     
     def snapshot(self, imgdir = None):
         # Get a frame from the video source
