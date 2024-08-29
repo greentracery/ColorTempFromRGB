@@ -22,6 +22,8 @@ class VideoCapture():
         self.width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.font = cv2.FONT_HERSHEY_COMPLEX
+        self.fontsize = 0.6
+        self.default_fontcolor = (0, 250, 0)
     
     def get_frame(self):
         if self.vid.isOpened():

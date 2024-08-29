@@ -30,12 +30,12 @@ args = parser.parse_args()
 
 video_source = 0 # open the default camera using default API
 
-if args.camindex:
-    video_source = int(args.camindex)
 if args.urlsource:
     video_source = str(args.urlsource)
 if args.filesource:
     video_source = str(args.filesource)
+if args.camindex:
+    video_source = int(args.camindex)
 
 if args.pause:
     pause = int(args.pause) # do smth. every {pause} sec.
@@ -54,7 +54,7 @@ class App():
         self.video2screen = False
 
         self.pause = pause
-        self.t0 = int(datetime.datetime.utcnow().timestamp())
+        self.t0 = int(datetime.datetime.now().timestamp())
         
         self.ct = ColorTemp()
         self.img2rgb = IMG2RGB()
@@ -105,12 +105,12 @@ class App():
             
             color_temp, distance = self.ct.getColorTempFromRGBN(rgbN[0],rgbN[1], rgbN[2])
             
-            frame = self.add_frame_info(frame, RGB, rgbN, color_temp, distance)
+            frame, dt = self.add_frame_info(frame, RGB, rgbN, color_temp, distance)
             
-            t2 = int(datetime.datetime.utcnow().timestamp())
+            t2 = int(dt.timestamp())
             if t2 >= self.t0 + self.pause:
-                print(f"Average R,G,B = {RGB[0]}, {RGB[1]}, {RGB[2]} ({rgbN[0]}, {rgbN[1]}, {rgbN[2]})")
-                print(f"Average color temperature {color_temp} K ({distance})")
+                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average R,G,B = {RGB[0]}, {RGB[1]}, {RGB[2]} ({rgbN[0]}, {rgbN[1]}, {rgbN[2]})')
+                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average color temperature {color_temp} K ({distance})')
                 self.t0 = t2
             
             self.photo = ImageTk.PhotoImage(image = Image.fromarray(frame))
@@ -122,52 +122,65 @@ class App():
         # restore RGB from normalized values
         RGBN = self.ct.rgb_from_normal(rgbN[0],rgbN[1], rgbN[2]) 
         # add info about frame
+        dt = datetime.datetime.now()
+        cv2.putText(frame, 
+            f'{dt.strftime("%d.%m.%Y %H:%M:%S")}', 
+            (10, 25), 
+            self.vid.font, 
+            self.vid.fontsize, 
+            self.vid.default_fontcolor, 
+            1
+        )
+        cv2.putText(frame, 
+            f"width:{self.vid.width}, height:{self.vid.height} ", 
+            (10, 50), 
+            self.vid.font, 
+            self.vid.fontsize, 
+            self.vid.default_fontcolor, 
+            1
+        )
+
         cv2.putText(
             frame, 
             f"Average R,G,B = {RGB[0]}, {RGB[1]}, {RGB[2]} ({rgbN[0]}, {rgbN[1]}, {rgbN[2]})", 
-            (10, self.vid.height - 100), 
+            (10, 75), 
             self.vid.font, 
-            0.6, 
-            (0, 250, 0), 
+            self.vid.fontsize, 
+            self.vid.default_fontcolor, 
             1
         )
         cv2.putText(
             frame, 
             f"Average color temperature {color_temp} K ({distance})", 
-            (10, self.vid.height - 75), 
+            (10, 100), 
             self.vid.font, 
-            0.6, 
-            (0, 250, 0), 
+            self.vid.fontsize, 
+            self.vid.default_fontcolor, 
             1
         )
         cv2.rectangle(
             frame, 
-            (self.vid.width - 100, self.vid.height - 60),
-            (self.vid.width - 60, self.vid.height - 20),
-            (RGB[0], RGB[1], RGB[1]),
+            (10, 120),
+            (50, 160),
+            (RGB[0], RGB[1], RGB[1]), # src. average color
             -1
         )
         cv2.rectangle(
             frame, 
-            (self.vid.width - 60, self.vid.height - 60),
-            (self.vid.width - 20, self.vid.height - 20),
-            (RGBN[0], RGBN[1], RGBN[2]), # from normalized values
+            (50, 120),
+            (90, 160),
+            (RGBN[0], RGBN[1], RGBN[2]), # color from normalized values
             -1
         )
         cv2.rectangle(
             frame, 
-            (self.vid.width - 100, self.vid.height - 60),
-            (self.vid.width - 20, self.vid.height - 20),
+            (10, 120),
+            (90, 160),
             (0, 250, 0),
             1
         )
-        cv2.putText(frame, f"width:{self.vid.width}", (10, self.vid.height - 50), self.vid.font, 0.6, (0, 250, 0), 1)
-        cv2.putText(frame, f"height:{self.vid.height}", (10, self.vid.height - 25), self.vid.font, 0.6, (0, 250, 0), 1)
-        dt = datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-        cv2.putText(frame, f"{dt}", (10, 25), self.vid.font, 0.6, (0, 250, 0), 1)
-        
         #return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #BGR2RGB
-        return frame
+        return frame, dt
 
 if __name__ == "__main__":
         # Create a window and pass it to the Application object
