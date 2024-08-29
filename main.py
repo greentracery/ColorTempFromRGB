@@ -144,21 +144,21 @@ class App():
             frame, 
             (self.vid.width - 100, self.vid.height - 60),
             (self.vid.width - 60, self.vid.height - 20),
-            (RGB[2], RGB[1], RGB[0]), #BGR
+            (RGB[0], RGB[1], RGB[1]),
             -1
         )
         cv2.rectangle(
             frame, 
             (self.vid.width - 60, self.vid.height - 60),
             (self.vid.width - 20, self.vid.height - 20),
-            (RGBN[2], RGBN[1], RGBN[0]), # from normalized values
+            (RGBN[0], RGBN[1], RGBN[2]), # from normalized values
             -1
         )
         cv2.rectangle(
             frame, 
             (self.vid.width - 100, self.vid.height - 60),
             (self.vid.width - 20, self.vid.height - 20),
-            (0, 250, 0), #BGR
+            (0, 250, 0),
             1
         )
         cv2.putText(frame, f"width:{self.vid.width}", (10, self.vid.height - 50), self.vid.font, 0.6, (0, 250, 0), 1)
