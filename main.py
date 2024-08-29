@@ -22,9 +22,6 @@ from modules.bbrmodel import ColorTemp
 from modules.img2rgb import IMG2RGB
 from modules.capture import VideoCapture
 
-ct = ColorTemp()
-img2rgb = IMG2RGB()
-
 print("P(rint) - save snapshot, Q(uit) - close & exit")
 
 parser = argparse.ArgumentParser(description="Calculate average color temperature for frame")
