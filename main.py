@@ -58,14 +58,23 @@ class App():
         
         self.ct = ColorTemp()
         self.img2rgb = IMG2RGB()
-    
+        
         # open video source (by default this will try to open the computer webcam)
         self.vid = VideoCapture(self.video_source)
-
+        
+        # show video source info in console:
+        print(f'Source:{video_source},  width:{self.vid.width}, height:{self.vid.height}')
+        
         # Create a canvas that can fit the above video source size
         self.canvas = tkinter.Canvas(window, width = self.vid.width, height = self.vid.height)
         self.canvas.pack()
-
+        
+        # Popup menu available by mouse right button click
+        self.canvas.bind("<Button-3>", self.popup_handler)
+        self.menu = tkinter.Menu(tearoff=0)
+        self.menu.add_command(label="Snapshot", command=self.snapshot_handler)
+        self.menu.add_command(label="Exit", command=self.exit_handler)
+        
         # Button that lets the user take a snapshot
         self.btn_snapshot=tkinter.Button(window, text="Snapshot", width=40, command=self.snapshot_handler)
         self.btn_snapshot.pack(anchor=tkinter.E, expand=True)
@@ -79,6 +88,12 @@ class App():
         self.update()
 
         self.window.mainloop()
+    
+    def popup_handler(self, event):
+        global x, y
+        x = event.x
+        y = event.y
+        self.menu.post(event.x_root, event.y_root)
     
     def exit_handler(self):
         self.window.destroy()  # close window & app
@@ -109,6 +124,7 @@ class App():
             
             t2 = int(dt.timestamp())
             if t2 >= self.t0 + self.pause:
+                # show frame info in console:
                 print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average R,G,B = {RGB[0]}, {RGB[1]}, {RGB[2]} ({rgbN[0]}, {rgbN[1]}, {rgbN[2]})')
                 print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average color temperature {color_temp} K ({distance})')
                 self.t0 = t2
