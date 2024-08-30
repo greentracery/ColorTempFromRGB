@@ -71,9 +71,11 @@ class App():
         
         # Popup menu available by mouse right button click
         self.canvas.bind("<Button-3>", self.popup_handler)
-        self.menu = tkinter.Menu(tearoff=0)
-        self.menu.add_command(label="Snapshot", command=self.snapshot_handler)
-        self.menu.add_command(label="Exit", command=self.exit_handler)
+        self.popup_menu = tkinter.Menu(tearoff=0)
+        self.popup_menu.add_command(label="Snapshot", command=self.snapshot_handler)
+        self.popup_menu.add_command(label="Close", command=self.popup_close_handler)
+        self.popup_menu.add_separator()
+        self.popup_menu.add_command(label="Exit", command=self.exit_handler)
         
         # Button that lets the user take a snapshot
         self.btn_snapshot=tkinter.Button(window, text="Snapshot", width=40, command=self.snapshot_handler)
@@ -93,7 +95,10 @@ class App():
         global x, y
         x = event.x
         y = event.y
-        self.menu.post(event.x_root, event.y_root)
+        self.popup_menu.post(event.x_root, event.y_root)
+    
+    def popup_close_handler(self):
+        self.popup_menu.unpost()
     
     def exit_handler(self):
         self.window.destroy()  # close window & app
