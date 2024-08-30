@@ -104,34 +104,27 @@ class App():
         self.window.destroy()  # close window & app
         print("Bye!")
     
-    def snapshot_handler(self):
-        # Get a frame from the video source
-        status, frame = self.vid.get_frame()
-
-        if status:
-            f = self.vid.snapshot('snapshots')
-            print(f"{f} saved!")
-    
     def update(self):
         # Get a frame from the video source
         status, frame = self.vid.get_frame()
         
         if status:
+            
             r,g,b = self.img2rgb.getRBGmatrix(frame)
             
-            RGB = (self.img2rgb.getAverageValue(r), self.img2rgb.getAverageValue(g), self.img2rgb.getAverageValue(b))
+            self.RGB = (self.img2rgb.getAverageValue(r), self.img2rgb.getAverageValue(g), self.img2rgb.getAverageValue(b))
             
-            rgbN = self.ct.normalize(RGB[0], RGB[1], RGB[2]) # normalized in [0..1]
+            self.rgbN = self.ct.normalize(self.RGB[0], self.RGB[1], self.RGB[2]) # normalized in [0..1]
             
-            color_temp, distance = self.ct.getColorTempFromRGBN(rgbN[0],rgbN[1], rgbN[2])
+            self.color_temp, self.distance = self.ct.getColorTempFromRGBN(self.rgbN[0],self.rgbN[1], self.rgbN[2])
             
-            frame, dt = self.add_frame_info(frame, RGB, rgbN, color_temp, distance)
+            frame, dt = self.add_frame_info(frame)
             
             t2 = int(dt.timestamp())
             if t2 >= self.t0 + self.pause:
                 # show frame info in console:
-                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average R,G,B = {RGB[0]}, {RGB[1]}, {RGB[2]} ({rgbN[0]}, {rgbN[1]}, {rgbN[2]})')
-                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average color temperature {color_temp} K ({distance})')
+                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average R,G,B = {self.RGB[0]}, {self.RGB[1]}, {self.RGB[2]} ({self.rgbN[0]}, {self.rgbN[1]}, {self.rgbN[2]})')
+                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average color temperature {self.color_temp} K ({self.distance})')
                 self.t0 = t2
             
             self.photo = ImageTk.PhotoImage(image = Image.fromarray(frame))
@@ -139,9 +132,12 @@ class App():
         
         self.window.after(self.delay, self.update)
 
-    def add_frame_info(self, frame, RGB, rgbN, color_temp, distance):
-        # restore RGB from normalized values
-        RGBN = self.ct.rgb_from_normal(rgbN[0],rgbN[1], rgbN[2]) 
+    def add_frame_info(self, frame):
+        
+        cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        
+        # restore R,G,B from normalized values
+        RGBN = self.ct.rgb_from_normal(self.rgbN[0], self.rgbN[1], self.rgbN[2]) 
         # add info about frame
         dt = datetime.datetime.now()
         cv2.putText(frame, 
@@ -163,7 +159,7 @@ class App():
 
         cv2.putText(
             frame, 
-            f"Average R,G,B = {RGB[0]}, {RGB[1]}, {RGB[2]} ({rgbN[0]}, {rgbN[1]}, {rgbN[2]})", 
+            f"Average R,G,B = {self.RGB[0]}, {self.RGB[1]}, {self.RGB[2]} ({self.rgbN[0]}, {self.rgbN[1]}, {self.rgbN[2]})", 
             (10, 75), 
             self.vid.font, 
             self.vid.fontsize, 
@@ -172,7 +168,7 @@ class App():
         )
         cv2.putText(
             frame, 
-            f"Average color temperature {color_temp} K ({distance})", 
+            f"Average color temperature {self.color_temp} K ({self.distance})", 
             (10, 100), 
             self.vid.font, 
             self.vid.fontsize, 
@@ -183,14 +179,14 @@ class App():
             frame, 
             (10, 120),
             (50, 160),
-            (RGB[0], RGB[1], RGB[1]), # src. average color
+            (self.RGB[2], self.RGB[1], self.RGB[0]), # src. average color (BGR)
             -1
         )
         cv2.rectangle(
             frame, 
             (50, 120),
             (90, 160),
-            (RGBN[0], RGBN[1], RGBN[2]), # color from normalized values
+            (RGBN[2], RGBN[1], RGBN[0]), # color from normalized values (BGR)
             -1
         )
         cv2.rectangle(
@@ -200,8 +196,37 @@ class App():
             (0, 250, 0),
             1
         )
-        #return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #BGR2RGB
+        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         return frame, dt
+        
+    def snapshot_handler(self):
+        # Check filepath
+        imgdir = 'snapshots'
+        target_path = os.path.join(os.getcwd(), imgdir)
+        if not os.path.exists(target_path):
+            os.makedirs(target_path)
+        
+        # Get a frame from the video source
+        status, frame = self.vid.get_frame()
+
+        if status:
+            
+            frame, dt = self.add_frame_info(frame)
+            
+            cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            
+            dt = time.strftime("%d-%m-%Y-%H-%M-%S")
+            # set encode param
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+            # compress image into buffer
+            result, imgencode = cv2.imencode(".jpg", frame, encode_param)
+            # read from buffer & save into file
+            filename = os.path.join(target_path, "frame-" + dt + ".jpg")
+            
+            cv2.imdecode(imgencode, cv2.IMREAD_COLOR)
+            cv2.imwrite(filename, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            
+            print(f"{filename} saved!")
 
 if __name__ == "__main__":
         # Create a window and pass it to the Application object
