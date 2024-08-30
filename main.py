@@ -50,6 +50,9 @@ class App():
         self.window.title(window_title)
         self.window.protocol("WM_DELETE_WINDOW", self.exit_handler)
         
+        self.w = self.window.winfo_screenwidth() - 30 # screen width
+        self.h = self.window.winfo_screenheight() - 30 #screen height
+        
         self.video_source = video_source
         self.video2screen = False
 
@@ -61,12 +64,16 @@ class App():
         
         # open video source (by default this will try to open the computer webcam)
         self.vid = VideoCapture(self.video_source)
-        
         # show video source info in console:
         print(f'Source:{video_source},  width:{self.vid.width}, height:{self.vid.height}')
         
+        zoom_x = self.vid.width / self.w if self.vid.width > self.w else 1
+        zoom_y = self.vid.height / self.h if self.vid.height > self.h else 1
+        
+        self.zoom = max(zoom_x, zoom_y)
+        
         # Create a canvas that can fit the above video source size
-        self.canvas = tkinter.Canvas(window, width = self.vid.width, height = self.vid.height)
+        self.canvas = tkinter.Canvas(window, width = int(self.vid.width / self.zoom), height = int(self.vid.height / self.zoom))
         self.canvas.pack()
         
         # Popup menu available by mouse right button click
@@ -86,7 +93,7 @@ class App():
         self.btn_exit.pack(anchor=tkinter.E, expand=True)
 
         # After it is called once, the update method will be automatically called every delay milliseconds
-        self.delay = 15
+        self.delay = 50
         self.update()
 
         self.window.mainloop()
@@ -118,7 +125,9 @@ class App():
             
             self.color_temp, self.distance = self.ct.getColorTempFromRGBN(self.rgbN[0],self.rgbN[1], self.rgbN[2])
             
-            frame, dt = self.add_frame_info(frame)
+            dt = datetime.datetime.now()
+            
+            frame = self.add_frame_info(frame, dt)
             
             t2 = int(dt.timestamp())
             if t2 >= self.t0 + self.pause:
@@ -127,19 +136,22 @@ class App():
                 print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average color temperature {self.color_temp} K ({self.distance})')
                 self.t0 = t2
             
-            self.photo = ImageTk.PhotoImage(image = Image.fromarray(frame))
+            image = Image.fromarray(frame)
+            # resize frame to canvas size:
+            if self.zoom > 1:
+                image = image.resize((int(self.vid.width / self.zoom), int(self.vid.height / self.zoom)))
+            
+            self.photo = ImageTk.PhotoImage(image)
             self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
         
         self.window.after(self.delay, self.update)
 
-    def add_frame_info(self, frame):
+    def add_frame_info(self, frame, dt):
         
         cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        
         # restore R,G,B from normalized values
         RGBN = self.ct.rgb_from_normal(self.rgbN[0], self.rgbN[1], self.rgbN[2]) 
         # add info about frame
-        dt = datetime.datetime.now()
         cv2.putText(frame, 
             f'{dt.strftime("%d.%m.%Y %H:%M:%S")}', 
             (10, 25), 
@@ -197,7 +209,7 @@ class App():
             1
         )
         cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        return frame, dt
+        return frame
         
     def snapshot_handler(self):
         # Check filepath
@@ -210,12 +222,11 @@ class App():
         status, frame = self.vid.get_frame()
 
         if status:
+            dt = time.strftime("%d-%m-%Y-%H-%M-%S")
             
-            frame, dt = self.add_frame_info(frame)
-            
+            frame = self.add_frame_info(frame, dt)
             cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             
-            dt = time.strftime("%d-%m-%Y-%H-%M-%S")
             # set encode param
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
             # compress image into buffer
