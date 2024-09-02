@@ -222,7 +222,7 @@ class App():
         status, frame = self.vid.get_frame()
 
         if status:
-            dt = time.strftime("%d-%m-%Y-%H-%M-%S")
+            dt = datetime.datetime.now()
             
             frame = self.add_frame_info(frame, dt)
             cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -232,7 +232,7 @@ class App():
             # compress image into buffer
             result, imgencode = cv2.imencode(".jpg", frame, encode_param)
             # read from buffer & save into file
-            filename = os.path.join(target_path, "frame-" + dt + ".jpg")
+            filename = os.path.join(target_path, f'frame-{dt.strftime("%d-%m-%Y-%H-%M-%S")}.jpg')
             
             cv2.imdecode(imgencode, cv2.IMREAD_COLOR)
             cv2.imwrite(filename, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
