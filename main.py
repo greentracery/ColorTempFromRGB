@@ -24,7 +24,8 @@ parser = argparse.ArgumentParser(description="Calculate average color temperatur
 parser.add_argument("-url", "--urlsource", type=str, help="Open IP video stream for video capturing")
 parser.add_argument("-file", "--filesource", type=str, help="Open video file or image file sequence")
 parser.add_argument("-ci", "--camindex", type=int, help="Camera index")
-parser.add_argument("-p", "--pause", type=int, help="Pause between log messages (sec.)")
+parser.add_argument("-p", "--pause", type=int, help="Pause between log messages (sec., defult 3)")
+parser.add_argument("-q", "--quality", type=int, help="JPEG quality (default 90)")
 
 args = parser.parse_args()
 
@@ -41,10 +42,15 @@ if args.pause:
     pause = int(args.pause) # do smth. every {pause} sec.
 else:
     pause = 3
+    
+if args.quality:
+    quality = int(args.quality) if args.quality <= 100 and args.quality > 0 else 90
+else:
+    quality = 90
 
 class App():
     
-    def __init__(self, window, window_title, video_source = 0, pause = 3):
+    def __init__(self, window, window_title, video_source = 0, pause: int = 3, quality: int = 90):
         
         self.window = window
         self.window.title(window_title)
@@ -57,6 +63,7 @@ class App():
         self.video2screen = False
 
         self.pause = pause
+        self.quality = quality
         self.t0 = int(datetime.datetime.now().timestamp())
         
         self.ct = ColorTemp()
@@ -217,14 +224,14 @@ class App():
             frame, 
             (10, 120),
             (50, 160),
-            (self.RGB[2], self.RGB[1], self.RGB[0]), # src. average color (BGR)
+            (self.RGB[0], self.RGB[1], self.RGB[2]), # src. average color
             -1
         )
         cv2.rectangle(
             frame, 
             (50, 120),
             (90, 160),
-            (RGBN[2], RGBN[1], RGBN[0]), # color from normalized values (BGR)
+            (RGBN[0], RGBN[1], RGBN[2]), # color from normalized values
             -1
         )
         cv2.rectangle(
@@ -254,7 +261,7 @@ class App():
             cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             
             # set encode param
-            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), self.quality]
             # compress image into buffer
             result, imgencode = cv2.imencode(".jpg", frame, encode_param)
             # read from buffer & save into file
