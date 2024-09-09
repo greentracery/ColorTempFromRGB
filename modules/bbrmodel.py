@@ -23,7 +23,7 @@ from contextlib import closing
 import os
 import numpy as np
 
-class ColorTemp():
+class ColorTempModel():
     
     data_model_file = r'bbr_color.txt'
     
@@ -72,7 +72,7 @@ class ColorTemp():
     def closest_number(self, numbers, target):
         return min(numbers, key=lambda x: abs(x - target)) if numbers is not None else None
     
-    def normalize(self, r, g, b) -> tuple:
+    def rgb_normalize(self, r, g, b) -> tuple:
         """ Return normalized values for R,G,B """
         max_value = max(r, g, b)
         if max_value != 0:

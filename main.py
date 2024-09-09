@@ -16,8 +16,8 @@ import time
 import argparse
 import tkinter
 
-from modules.bbrmodel import ColorTemp
-from modules.img2rgb import IMG2RGB
+from modules.bbrmodel import ColorTempModel
+from modules.img2layers import IMG2Layers
 from modules.capture import VideoCapture
 
 parser = argparse.ArgumentParser(description="Calculate average color temperature for frame")
@@ -25,6 +25,7 @@ parser.add_argument("-url", "--urlsource", type=str, help="Open IP video stream 
 parser.add_argument("-file", "--filesource", type=str, help="Open video file or image file sequence")
 parser.add_argument("-ci", "--camindex", type=int, help="Camera index")
 parser.add_argument("-p", "--pause", type=int, help="Pause between log messages (sec., defult 3)")
+parser.add_argument("-m", "--mode", type=str, help="Mean or median mode for average values")
 parser.add_argument("-q", "--quality", type=int, help="JPEG quality (default 90)")
 
 args = parser.parse_args()
@@ -38,6 +39,11 @@ if args.filesource:
 if args.camindex:
     video_source = int(args.camindex)
 
+if args.mode and args.mode.lower() in ('mean', 'median'):
+    mode = args.mode.lower()
+else:
+    mode = 'mean'
+
 if args.pause:
     pause = int(args.pause) # do smth. every {pause} sec.
 else:
@@ -50,7 +56,7 @@ else:
 
 class App():
     
-    def __init__(self, window, window_title, video_source = 0, pause: int = 3, quality: int = 90):
+    def __init__(self, window, window_title, video_source = 0, pause: int = 3, quality: int = 90, mode: str = 'mean'):
         
         self.window = window
         self.window.title(window_title)
@@ -64,10 +70,11 @@ class App():
 
         self.pause = pause
         self.quality = quality
+        self.mode = mode
         self.t0 = int(datetime.datetime.now().timestamp())
         
-        self.ct = ColorTemp()
-        self.img2rgb = IMG2RGB()
+        self.ct = ColorTempModel()
+        self.img2rgb = IMG2Layers()
         
         self.init_capture()
         
@@ -149,13 +156,13 @@ class App():
             
             if status:
                 
-                self.RGB, self.rgbN, self.color_temp, self.distance = self.get_frame_info(frame)
+                self.RGB, self.rgbN, self.color_temp, self.distance, self.brightness = self.get_frame_info(frame)
                 
                 frame = self.add_frame_info(frame, dt)
                 
                 # show frame info in console:
                 print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average R,G,B = {self.RGB[0]}, {self.RGB[1]}, {self.RGB[2]} ({self.rgbN[0]}, {self.rgbN[1]}, {self.rgbN[2]})')
-                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average color temperature {self.color_temp} K ({self.distance})')
+                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average color temperature {self.color_temp} K ({self.distance}), brightness {self.brightness}%')
                 self.t0 = t2
             
                 image = Image.fromarray(frame)
@@ -169,15 +176,20 @@ class App():
         self.window.after(self.delay, self.update)
     
     def get_frame_info(self, frame):
-        r,g,b = self.img2rgb.getRBGmatrix(frame)
+        r,g,b = self.img2rgb.get_rgb_matrix(frame) 
         
-        RGB = (self.img2rgb.getAverageValue(r), self.img2rgb.getAverageValue(g), self.img2rgb.getAverageValue(b))
+        if self.mode == 'median':
+            RGB = self.img2rgb.get_median_colorvalues([r, g, b])
+        else:
+            RGB = self.img2rgb.get_mean_colorvalues([r, g, b])
         
-        rgbN = self.ct.normalize(RGB[0], RGB[1], RGB[2]) # normalized in [0..1]
+        brightness = self.img2rgb.get_average_brightness(RGB)
+        
+        rgbN = self.ct.rgb_normalize(RGB[0], RGB[1], RGB[2]) # normalized in [0..1]
         
         color_temp, distance = self.ct.getColorTempFromRGBN(rgbN[0], rgbN[1], rgbN[2])
         
-        return RGB, rgbN, color_temp, distance
+        return RGB, rgbN, color_temp, distance, brightness
     
     def add_frame_info(self, frame, dt):
         
@@ -213,7 +225,7 @@ class App():
         )
         cv2.putText(
             frame, 
-            f"Average color temperature {self.color_temp} K ({self.distance})", 
+            f"Average color temperature {self.color_temp} K ({self.distance}), brightness {self.brightness}%", 
             (10, 100), 
             self.vid.font, 
             self.vid.fontsize, 
@@ -274,4 +286,4 @@ class App():
 
 if __name__ == "__main__":
         # Create a window and pass it to the Application object
-        App(tkinter.Tk(), "Color Temperature From RGB", video_source)
+        App(tkinter.Tk(), "Color Temperature From RGB", video_source, pause, quality, mode)
