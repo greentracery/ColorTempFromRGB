@@ -178,10 +178,7 @@ class App():
     def get_frame_info(self, frame):
         r,g,b = self.img2rgb.get_rgb_matrix(frame) 
         
-        if self.mode == 'median':
-            RGB = self.img2rgb.get_median_colorvalues([r, g, b])
-        else:
-            RGB = self.img2rgb.get_mean_colorvalues([r, g, b])
+        RGB = self.img2rgb.get_average_colorvalues([r, g, b], self.mode)
         
         brightness = self.img2rgb.get_average_brightness(RGB)
         

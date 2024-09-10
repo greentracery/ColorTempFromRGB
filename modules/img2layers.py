@@ -12,6 +12,8 @@ import numpy as np
 
 class IMG2Layers():
     
+    MODES = ('mean', 'median')
+    
     def img_from_array(self, img):
         """ Return Pilow Image """
         return Image.fromarray(img)
@@ -75,6 +77,16 @@ class IMG2Layers():
         K = np.array(black)
         
         return C,M,Y,K
+        
+    def get_average_colorvalues(self, color_layers: list, mode: str) -> list:
+        """ Return average value(s) for all pixels in image color layer(s) """
+        if mode not in self.MODES:
+            mode = self.MODES[0] # default == 'mean'
+            
+        if mode == self.MODES[1]:
+            return self.get_median_colorvalues(color_layers)
+            
+        return self.get_mean_colorvalues(color_layers)
     
     def get_mean_colorvalues(self, color_layers: list) -> list:
         """ Return mean value(s) for all pixels in image color layer(s) """
