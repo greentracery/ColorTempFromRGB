@@ -19,6 +19,7 @@ import tkinter
 from modules.bbrmodel import ColorTempModel
 from modules.img2layers import IMG2Layers
 from modules.capture import VideoCapture
+from modules.logger import LogWriter
 
 parser = argparse.ArgumentParser(description="Calculate average color temperature for frame")
 parser.add_argument("-url", "--urlsource", type=str, help="Open IP video stream for video capturing")
@@ -27,6 +28,7 @@ parser.add_argument("-ci", "--camindex", type=int, help="Camera index")
 parser.add_argument("-p", "--pause", type=int, help="Pause between log messages (sec., defult 3)")
 parser.add_argument("-m", "--mode", type=str, help="Mean or median mode for average values")
 parser.add_argument("-q", "--quality", type=int, help="JPEG quality (default 90)")
+parser.add_argument("-log", "--logfile", type=str, help="Log to file")
 
 args = parser.parse_args()
 
@@ -53,10 +55,15 @@ if args.quality:
     quality = int(args.quality) if args.quality <= 100 and args.quality > 0 else 90
 else:
     quality = 90
+    
+if args.logfile:
+    logfile = args.logfile
+else:
+    logfile = None
 
 class App():
     
-    def __init__(self, window, window_title, video_source = 0, pause: int = 3, quality: int = 90, mode: str = 'mean'):
+    def __init__(self, window, window_title, video_source = 0, pause: int = 3, quality: int = 90, mode: str = 'mean', logfile = None):
         
         self.window = window
         self.window.title(window_title)
@@ -75,6 +82,11 @@ class App():
         
         self.ct = ColorTempModel()
         self.img2rgb = IMG2Layers()
+        
+        if logfile is not None:
+            self.lw = LogWriter(logfile)
+        else:
+            self.lw = None
         
         self.init_capture()
         
@@ -124,10 +136,15 @@ class App():
             self.zoom = max(zoom_x, zoom_y)
             
             # show video source info in console:
-            print(f'Source:{video_source},  width:{self.vid.width}, height:{self.vid.height}, every {self.pause} sec.')
+            info_msg = f'Source:{video_source},  width:{self.vid.width}, height:{self.vid.height}, every {self.pause} sec.'
+            print(info_msg)
+            if self.lw:
+                self.lw.log_info(info_msg)
             
         except Exception as e:
             print(e)
+            if self.lw:
+                self.lw.log_error(e)
             self.exit_handler()
     
     def exit_handler(self):
@@ -140,7 +157,10 @@ class App():
         status = self.vid.grab()
         
         if not status:
-            print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Error, can not capture image from camera)')
+            warn_msg = 'Can not capture image from camera'
+            print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} {warn_msg}')
+            if self.lw:
+                self.lw.log_warning(warn_msg)
             self.vid.release()
             time.sleep(10)
             self.init_capture()
@@ -152,7 +172,10 @@ class App():
                 # Get a frame from the video source
                 status, frame = self.vid.retrieve()
             except:
-                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Error, no frame')
+                warn_msg = 'No frame'
+                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} {warn_msg}')
+                if self.lw:
+                    self.lw.log_warning(warn_msg)
             
             if status:
                 
@@ -161,8 +184,14 @@ class App():
                 frame = self.add_frame_info(frame, dt)
                 
                 # show frame info in console:
-                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average R,G,B = {self.RGB[0]}, {self.RGB[1]}, {self.RGB[2]} ({self.rgbN[0]}, {self.rgbN[1]}, {self.rgbN[2]})')
-                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} Average color temperature {self.color_temp} K ({self.distance}), brightness {self.brightness}%')
+                info_msg = f'Average R,G,B = {self.RGB[0]}, {self.RGB[1]}, {self.RGB[2]} ({self.rgbN[0]}, {self.rgbN[1]}, {self.rgbN[2]})'
+                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} {info_msg}')
+                if self.lw:
+                    self.lw.log_info(info_msg)
+                info_msg = f'Average color temperature {self.color_temp} K ({self.distance}), brightness {self.brightness}%'
+                print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} {info_msg}')
+                if self.lw:
+                    self.lw.log_info(info_msg)
                 self.t0 = t2
             
                 image = Image.fromarray(frame)
@@ -280,7 +309,9 @@ class App():
             cv2.imwrite(filename, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             
             print(f"{filename} saved!")
+            if self.lw:
+                    self.lw.log_info(f"{filename} saved!")
 
 if __name__ == "__main__":
         # Create a window and pass it to the Application object
-        App(tkinter.Tk(), "Color Temperature From RGB", video_source, pause, quality, mode)
+        App(tkinter.Tk(), "Color Temperature From RGB", video_source, pause, quality, mode, logfile)

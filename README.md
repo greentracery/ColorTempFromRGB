@@ -15,7 +15,7 @@ Homepage: https://github.com/greentracery/ColorTempFromRGB
 ## Usage:
     
 ```shell
-    [python3] main.py [-url="rtsp://url_of_stream_source"] [-file="file_source"] [-ci=0] [-p=10] [-q=90] [-m=median|mean]
+    [python3] main.py [-url="rtsp://url_of_stream_source"] [-file="file_source"] [-ci=0] [-p=10] [-q=90] [-m=median|mean] [-log="logfile"]
 ```
 
 Screenshots:
