@@ -188,7 +188,7 @@ class App():
                 print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} {info_msg}')
                 if self.lw:
                     self.lw.log_info(info_msg)
-                info_msg = f'Average color temperature {self.color_temp} K ({self.distance}), brightness {self.brightness}%'
+                info_msg = f'Average color temperature {self.color_temp} K ({self.distance}), brightness {self.brightness}% {self.imgmode}'
                 print(f'{dt.strftime("%d.%m.%Y %H:%M:%S")} {info_msg}')
                 if self.lw:
                     self.lw.log_info(info_msg)
@@ -215,6 +215,11 @@ class App():
         
         color_temp, distance = self.ct.getColorTempFromRGBN(rgbN[0], rgbN[1], rgbN[2])
         
+        if np.array_equal(r, g) and np.array_equal(g, b):
+            self.imgmode = '(Night/grayscale mode)'
+        else:
+            self.imgmode = '(RGB mode)'
+        
         return RGB, rgbN, color_temp, distance, brightness
     
     def add_frame_info(self, frame, dt):
@@ -232,7 +237,7 @@ class App():
             1
         )
         cv2.putText(frame, 
-            f"width:{self.vid.width}, height:{self.vid.height} ", 
+            f"width:{self.vid.width}, height:{self.vid.height} {self.imgmode}", 
             (10, 50), 
             self.vid.font, 
             self.vid.fontsize, 
