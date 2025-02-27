@@ -11,15 +11,37 @@ import os
 import numpy as np
 
 class IMG2Layers():
+    """ Get R,G,B (C,M,Y,K) layers from image, calculate average color values & brightness
     
+        property: MODES: 'mean' or 'median'
+        
+        method: img_from_array: Return Pilow Image from numpy array
+        method: img_to_array: Return numpy.array from image file
+        method: get_rgb_matrix: Return tuple of numpy.arrays for each color layer (R,G,B)
+        method: get_cmyk_matrix: Return tuple of numpy.arrays for each color layer (C,M,Y,K)
+        method: get_average_colorvalues: Return average (mean or median) value for all pixels for each color layer
+        method: get_mean_colorvalues: Return mean value for all pixels for each color layer
+        method: get_median_colorvalues: Return median value for all pixels for each color layer
+        method: get_average_brightness: Return average image brightness in [0..100] range
+    """
     MODES = ('mean', 'median')
     
     def img_from_array(self, img):
-        """ Return Pilow Image """
+        """ Return Pilow Image from numpy array 
+        
+            :param img: numpy.array
+            
+            return Pilow Image
+        """
         return Image.fromarray(img)
         
     def img_to_array(self, img_filename):
-        """ Return numpy.array """
+        """ Return numpy.array from image file 
+        
+            :param img_filename: path to image file
+            
+            return numpy.array
+        """
         buf = io.BytesIO()
         img = Image.open(img_filename)
         imgFormat = img.format
@@ -34,7 +56,16 @@ class IMG2Layers():
         return orgimg
     
     def get_rgb_matrix(self, image) -> tuple:
-        """ Return tuple of numpy.arrays """
+        """ Return tuple of numpy.arrays for each color layer (R,G,B) 
+        
+            :param image: numpy.array
+            
+            return tuple(
+                R: numpy.array
+                G: numpy.array
+                B: numpy.array
+            )
+        """
         img = self.img_from_array(image)
         self.width, self.height = img.size
         frm = img.format
@@ -56,7 +87,17 @@ class IMG2Layers():
         return R, G, B
         
     def get_cmyk_matrix(self, image) -> tuple:
-        """ Return tuple of numpy.arrays """
+        """ Return tuple of numpy.arrays for each color layer (C,M,Y,K) 
+        
+            :param image: numpy.array
+            
+            return tuple(
+                C: numpy.array
+                M: numpy.array
+                Y: numpy.array
+                K: numpy.array
+            )
+        """
         img = self.img_from_array(image)
         width, height = img.size
         frm = img.format
@@ -79,7 +120,13 @@ class IMG2Layers():
         return C,M,Y,K
         
     def get_average_colorvalues(self, color_layers: list, mode: str) -> list:
-        """ Return average value(s) for all pixels in image color layer(s) """
+        """ Return average value for all pixels for each color layer 
+        
+            :param color_layers: list of color layer's numpy.arrays
+            :param mode: 'mean' or 'median'
+            
+            return list of color layer's average values
+        """
         if mode not in self.MODES:
             mode = self.MODES[0] # default == 'mean'
             
@@ -89,7 +136,12 @@ class IMG2Layers():
         return self.get_mean_colorvalues(color_layers)
     
     def get_mean_colorvalues(self, color_layers: list) -> list:
-        """ Return mean value(s) for all pixels in image color layer(s) """
+        """ Return mean value for all pixels for each color layer 
+        
+            :param color_layers: list of color layer's numpy.arrays
+            
+            return list of color layer's average values
+        """
         out_layers = []
         for layer in color_layers:
             if len(layer.shape) != 2:
@@ -100,7 +152,12 @@ class IMG2Layers():
         return out_layers
     
     def get_median_colorvalues(self, color_layers: list) -> list:
-        """ Return median value(s) for all pixels in image color layer(s) """
+        """ Return median value for all pixels for each color layer 
+        
+            :param color_layers: list of color layer's numpy.arrays
+            
+            return list of color layer's average values
+        """
         out_layers = []
         for layer in color_layers:
             if len(layer.shape) != 2:
@@ -111,5 +168,10 @@ class IMG2Layers():
         return out_layers
     
     def get_average_brightness(self, average_layer_values: list) -> int:
-        """ Return average brightness in [0..100] range """
+        """ Return average image brightness in [0..100] range 
+        
+            :param average_layer_values: list of color layer's average values
+            
+            return int: brightness in [0..100] range
+        """
         return int(max(average_layer_values) * 100 / 255)

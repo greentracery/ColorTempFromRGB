@@ -10,8 +10,19 @@ import logging
 import os
 
 class LogWriter():
+    """ Create & write logfile 
+    
+        method: log_error: Write error message (with trace -  optional) into logfile
+        method: log_warning: Write warning message into logfile
+        method: log_info: Write info message into logfile
+        method: exception_trace: Traceback of exception/error
+    """
     
     def __init__(self, logname):
+        """
+            :param logname: name of log file
+        """
+        
         logger = logging.getLogger(logname)
         logger.setLevel(logging.INFO)
         logpath = os.path.join(os.getcwd(),'logs')
@@ -25,7 +36,11 @@ class LogWriter():
         self.logger = logger
 
     def log_error(self, e, trace_error: bool = False):
-        """ Отправляем ошибку (error) в лог """
+        """ Write error message (with trace -  optional) into logfile 
+        
+            :param e: Exception/Error
+            :param trace_error: Start traceback for exception/error if True
+        """
         self.logger.error(e)
         if trace_error:
             e_trace = self.exception_trace(e)
@@ -33,15 +48,24 @@ class LogWriter():
             self.logger.error(msg)
     
     def log_warning(self, msg):
-        """ Отправляем ошибку (warning) в лог """
+        """ Write warning message into logfile 
+        
+            :param msg: Message text
+        """
         self.logger.warning(msg)
     
     def log_info(self, msg):
-        """ Отправляем сообщение в лог """
+        """ Write info message into logfile 
+        
+            :param msg: Message text
+        """
         self.logger.info(msg)
         
     def exception_trace(self, e):
-        """ Трассировка исключения """
+        """ Traceback of exception/error 
+            
+            :param e: Exception or error
+        """
         e_trace = tr.TracebackException(exc_type =type(e),exc_traceback = e.__traceback__ , exc_value =e).stack[-1]
         return e_trace
 

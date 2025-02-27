@@ -10,7 +10,7 @@ Homepage: https://github.com/greentracery/ColorTempFromRGB
     
     - Numpy
     
-    - OpenCV (v.3.2 - 4.8;  v.4.10 doesn't work yet
+    - OpenCV v.3.2 - 4.8;  v.4.10 doesn't work yet (with rtsp stream)
 
 ## Usage:
     

@@ -62,9 +62,27 @@ else:
     logfile = None
 
 class App():
+    """ Main GUI App based on TkInter 
+    
+        method: popup_handler: Show popup menu
+        method: popup_close_handler: Close popup menu
+        method: init_capture: Open video source & set init. params
+        method: exit_handler: Exit & close app
+        method: update: Update frame on GUI form
+        method: get_frame_info: Return extended info about frame, include color temperature, brightnes etc
+        method: add_frame_info: Draw extended info on frame, include color temperature, brightnes etc
+        method: snapshot_handler: Make a snapshot of frame
+    """
     
     def __init__(self, window, window_title, video_source = 0, pause: int = 3, quality: int = 90, mode: str = 'mean', logfile = None):
-        
+        """
+            :param window:
+            :param window_title:
+            :param video_source: default, rtsp or filename
+            :param pause: pause between frames, sec.
+            :param quality: jpeg quality for snapshots
+            :param mode: mean or median mode for average Tk & brightness
+        """
         self.window = window
         self.window.title(window_title)
         self.window.protocol("WM_DELETE_WINDOW", self.exit_handler)
@@ -117,15 +135,21 @@ class App():
         self.window.mainloop()
     
     def popup_handler(self, event):
+        """ Show popup menu
+            
+            :param event:
+        """
         global x, y
         x = event.x
         y = event.y
         self.popup_menu.post(event.x_root, event.y_root)
     
     def popup_close_handler(self):
+        """ Close popup menu """
         self.popup_menu.unpost()
     
     def init_capture(self):
+        """ Open video source & set init. params """
         try:
             # open video source (by default this will try to open the computer webcam)
             self.vid = VideoCapture(self.video_source)
@@ -148,10 +172,13 @@ class App():
             self.exit_handler()
     
     def exit_handler(self):
+        """ Exit & close app """
         self.window.destroy()  # close window & app
         print("Bye!")
     
     def update(self):
+        """ Update frame on GUI form """
+        
         dt = datetime.datetime.now()
         
         status = self.vid.grab()
@@ -205,6 +232,18 @@ class App():
         self.window.after(self.delay, self.update)
     
     def get_frame_info(self, frame):
+        """ Return extended info about frame, include color temperature, brightnes etc
+            
+            :param frame: frame from video source (numpy array)
+            
+            return: tuple(
+                RGB: list[R,G,B]: R,G,B values 
+                rgbN: list[R,G,B]: R,G,B values (normalized)
+                color_temp: int: average color temperature
+                distance: float: accuracy (0..1)
+                brightness: int: average brightness (0..100%)
+            )
+        """
         r,g,b = self.img2rgb.get_rgb_matrix(frame) 
         
         RGB = self.img2rgb.get_average_colorvalues([r, g, b], self.mode)
@@ -223,6 +262,13 @@ class App():
         return RGB, rgbN, color_temp, distance, brightness
     
     def add_frame_info(self, frame, dt):
+        """ Draw extended info on frame, include color temperature, brightnes etc
+            
+            :param frame: frame from video source (numpy array)
+            :param dt: datetime
+            
+            return frame: frame (numpy array) with extended info 
+        """
         
         cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         # restore R,G,B from normalized values
@@ -288,6 +334,8 @@ class App():
         return frame
         
     def snapshot_handler(self):
+        """ Make a snapshot of frame """
+        
         # Check filepath
         imgdir = 'snapshots'
         target_path = os.path.join(os.getcwd(), imgdir)
