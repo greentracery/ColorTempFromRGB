@@ -5,61 +5,28 @@
 ## https://github.com/greentracery/ColorTempFromRGB
 ##
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageTk
-import cv2
 import sys
 import os
-import io
+
+version = (sys.version_info.major, sys.version_info.minor)
+if (sys.version_info.major < 3 or sys.version_info.minor < 6):
+    e = f'Python version 3.6 or higher required! (Current version {sys.version_info.major}.{sys.version_info.minor})'
+    print(e)
+    sys.exit(1)
+
+import argparse
+import cv2
 import numpy as np
 import datetime
 import time
-import argparse
 import tkinter
+
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageTk
 
 from modules.bbrmodel import ColorTempModel
 from modules.img2layers import IMG2Layers
 from modules.capture import VideoCapture
 from modules.logger import LogWriter
-
-parser = argparse.ArgumentParser(description="Calculate average color temperature for frame")
-parser.add_argument("-url", "--urlsource", type=str, help="Open IP video stream for video capturing")
-parser.add_argument("-file", "--filesource", type=str, help="Open video file or image file sequence")
-parser.add_argument("-ci", "--camindex", type=int, help="Camera index")
-parser.add_argument("-p", "--pause", type=int, help="Pause between log messages (sec., defult 3)")
-parser.add_argument("-m", "--mode", type=str, help="Mean or median mode for average values")
-parser.add_argument("-q", "--quality", type=int, help="JPEG quality (default 90)")
-parser.add_argument("-log", "--logfile", type=str, help="Log to file")
-
-args = parser.parse_args()
-
-video_source = 0 # open the default camera using default API
-
-if args.urlsource:
-    video_source = str(args.urlsource)
-if args.filesource:
-    video_source = str(args.filesource)
-if args.camindex:
-    video_source = int(args.camindex)
-
-if args.mode and args.mode.lower() in ('mean', 'median'):
-    mode = args.mode.lower()
-else:
-    mode = 'mean'
-
-if args.pause:
-    pause = int(args.pause) # do smth. every {pause} sec.
-else:
-    pause = 3
-    
-if args.quality:
-    quality = int(args.quality) if args.quality <= 100 and args.quality > 0 else 90
-else:
-    quality = 90
-    
-if args.logfile:
-    logfile = args.logfile
-else:
-    logfile = None
 
 class App():
     """ Main GUI App based on TkInter 
@@ -106,6 +73,11 @@ class App():
         else:
             self.lw = None
         
+        _msg = f"OpenCV version: {cv2.__version__}"
+        print(_msg)
+        if self.lw:
+            self.lw.log_info(_msg)
+        
         self.init_capture()
         
         # Create a canvas that can fit the above video source size
@@ -115,6 +87,7 @@ class App():
         # Popup menu available by mouse right button click
         self.canvas.bind("<Button-3>", self.popup_handler)
         self.popup_menu = tkinter.Menu(tearoff=0)
+        self.popup_menu.add_command(label="Settings", command=self.settings_handler)
         self.popup_menu.add_command(label="Snapshot", command=self.snapshot_handler)
         self.popup_menu.add_command(label="Close", command=self.popup_close_handler)
         self.popup_menu.add_separator()
@@ -147,6 +120,62 @@ class App():
     def popup_close_handler(self):
         """ Close popup menu """
         self.popup_menu.unpost()
+    
+    def settings_handler(self):
+        self.settings_window = tkinter.Toplevel()
+        self.settings_window.title("Settings")
+        self.settings_window.geometry("250x200")
+        self.settings_window.protocol("WM_DELETE_WINDOW", lambda: self.dismiss_settings(self.settings_window))
+        self.settings_window.label = tkinter.Label(self.settings_window, text="Set new videosource (0 to default)")
+        self.settings_window.label.pack(anchor=tkinter.CENTER,  padx=8, pady=8)
+        # Text field fo new video source (rtsp stream or filename, "0" to default)
+        self.settings_window.vsource = tkinter.Entry(self.settings_window)
+        self.settings_window.vsource.pack(anchor=tkinter.N, expand=True, padx=8, pady=8)
+        # Button "save settings"
+        self.settings_window.btn = tkinter.Button(self.settings_window, text="Save Settings", width=40, command=self.save_settings_handler)
+        self.settings_window.btn.pack(anchor=tkinter.E, expand=True, padx=8, pady=8)
+        self.settings_window.grab_set()
+        self.settings_window.focus_set()
+        self.settings_window.wait_window()
+    
+    def dismiss_settings(self, window):
+        window.grab_release() 
+        window.destroy()
+    
+    def save_settings_handler(self):
+        vsource = self.settings_window.vsource.get()
+        self.dismiss_settings(self.settings_window)
+        
+        vsource = vsource.strip()
+        if len(vsource) == 0:
+            _msg = f"New video source is empty!"
+            print(_msg)
+            if self.lw:
+                self.lw.log_warnint(_msg)
+            return
+        
+        _msg = f"Try to open new video source: {vsource}"
+        print(_msg)
+        if self.lw:
+            self.lw.log_info(_msg)
+        
+        if vsource.isdigit():
+            vsource = int(vsource)
+        
+        if vsource == self.video_source:
+            _msg = f"Video source was not changed!"
+            print(_msg)
+            if self.lw:
+                self.lw.log_warnint(_msg)
+            return
+        
+        try:
+            self.video_source = vsource
+            self.init_capture()
+        except Exception as e:
+            print(e)
+            if self.lw:
+                self.lw.log_error(repr(e))
     
     def init_capture(self):
         """ Open video source & set init. params """
@@ -365,6 +394,51 @@ class App():
             if self.lw:
                     self.lw.log_info(f"{filename} saved!")
 
+
+parser = argparse.ArgumentParser(description="Calculate average color temperature for frame")
+parser.add_argument("-url", "--urlsource", type=str, help="Open IP video stream for video capturing")
+parser.add_argument("-file", "--filesource", type=str, help="Open video file or image file sequence")
+parser.add_argument("-ci", "--camindex", type=int, help="Camera index")
+parser.add_argument("-p", "--pause", type=int, help="Pause between log messages (sec., defult 3)")
+parser.add_argument("-m", "--mode", type=str, help="Mean or median mode for average values")
+parser.add_argument("-q", "--quality", type=int, help="JPEG quality (default 90)")
+parser.add_argument("-log", "--logfile", type=str, help="Log to file")
+
+args = parser.parse_args()
+
+video_source = 0 # open the default camera using default API
+
+if args.urlsource:
+    video_source = str(args.urlsource)
+if args.filesource:
+    video_source = str(args.filesource)
+if args.camindex:
+    video_source = int(args.camindex)
+
+if args.mode and args.mode.lower() in ('mean', 'median'):
+    mode = args.mode.lower()
+else:
+    mode = 'mean'
+
+if args.pause:
+    pause = int(args.pause) # do smth. every {pause} sec.
+else:
+    pause = 3
+
+if args.quality:
+    quality = int(args.quality) if args.quality <= 100 and args.quality > 0 else 90
+else:
+    quality = 90
+
+if args.logfile:
+    logfile = args.logfile
+else:
+    logfile = None
+
 if __name__ == "__main__":
+    try:
         # Create a window and pass it to the Application object
         App(tkinter.Tk(), "Color Temperature From RGB", video_source, pause, quality, mode, logfile)
+    except Exception as e:
+        print(repr(e))
+        sys.exit(2)
