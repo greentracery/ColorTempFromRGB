@@ -43,14 +43,15 @@ class IMG2Layers():
             return numpy.array
         """
         buf = io.BytesIO()
-        img = Image.open(img_filename)
-        imgFormat = img.format
-        imgMode = img.mode
-        if (imgMode == 'RGBA'):
-            rgb_image = img.convert('RGB') # delete aplha-channel from image
-            rgb_image.save(buf, format='JPEG')
-        else:
-            img.save(buf, format='JPEG')
+        with Image.open(img_filename) as img:
+            imgFormat = img.format
+            imgMode = img.mode
+            if (imgMode == 'RGBA'):
+                rgb_image = img.convert('RGB') # delete aplha-channel from image
+                rgb_image.save(buf, format='JPEG')
+            else:
+                img.save(buf, format='JPEG')
+        
         byte_img = buf.getvalue()
         orgimg = np.array(Image.open(io.BytesIO(byte_img)))
         return orgimg
